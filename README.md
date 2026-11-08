@@ -2,11 +2,11 @@
 
 ![Conditional Plugins & Observers for Magento 2](docs/images/banner.png)
 
-[![M2 Coding Standard](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/coding-standard.yml/badge.svg?branch=develop)](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/coding-standard.yml)
-[![M2 Mess Detector](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/mess-detector.yml/badge.svg?branch=develop)](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/mess-detector.yml)
-[![M2 PHPStan](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/phpstan.yml/badge.svg?branch=develop)](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/phpstan.yml)
-[![M2 PHP Compatibility](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/php-compatibility.yml/badge.svg?branch=develop)](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/php-compatibility.yml)
-[![M2 Unit Tests](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/unit-tests.yml/badge.svg?branch=develop)](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/unit-tests.yml)
+[![M2 Coding Standard](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/coding-standard.yml/badge.svg?branch=main)](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/coding-standard.yml)
+[![M2 Mess Detector](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/mess-detector.yml/badge.svg?branch=main)](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/mess-detector.yml)
+[![M2 PHPStan](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/phpstan.yml/badge.svg?branch=main)](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/phpstan.yml)
+[![M2 PHP Compatibility](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/php-compatibility.yml/badge.svg?branch=main)](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/php-compatibility.yml)
+[![M2 Unit Tests](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/unit-tests.yml/badge.svg?branch=main)](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/unit-tests.yml)
 
 Extension vendors ship one release to many stores, running different Magento versions and editions. When a [plugin](https://developer.adobe.com/commerce/php/development/components/plugins/) or an [observer](https://developer.adobe.com/commerce/php/development/components/events-and-observers/) is only needed on some of them, the usual fix is to inject `ProductMetadataInterface` and add an `if` on the edition and version. Those checks repeat across the code, hide what the class is really for and run on every call, and the class is still instantiated and still sits in every stack trace on stores where it has nothing to do.
 
