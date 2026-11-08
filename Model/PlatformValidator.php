@@ -2,65 +2,159 @@
 
 declare(strict_types=1);
 
-namespace Fom\Annotations\Model;
+namespace Fom\ConditionalPlugins\Model;
 
-use Fom\Annotations\Attribute\Platform;
+use Fom\ConditionalPlugins\Attribute\Platform;
+use Fom\ConditionalPlugins\Enum\Comparison;
+use Fom\ConditionalPlugins\Enum\Distribution;
+use Fom\ConditionalPlugins\Enum\Edition;
+use InvalidArgumentException;
 use Magento\Framework\App\ProductMetadataInterface;
+use Magento\Framework\App\ProductMetadataInterfaceFactory;
 
 class PlatformValidator
 {
     /**
-     * @var ProductMetadataInterface
+     * @var ProductMetadataInterface|null
      */
-    private $productMetadata;
+    private ?ProductMetadataInterface $productMetadata = null;
 
     /**
-     * @param ProductMetadataInterface $productMetadata
+     * @param ProductMetadataInterfaceFactory $productMetadataFactory
+     * @param NullCache $nullCache
      */
-    public function __construct(ProductMetadataInterface $productMetadata)
-    {
-        $this->productMetadata = $productMetadata;
+    public function __construct(
+        private readonly ProductMetadataInterfaceFactory $productMetadataFactory,
+        private readonly NullCache $nullCache
+    ) {
     }
 
     /**
-     * @param Platform $platform
+     * Check whether the current platform satisfies a condition.
      *
+     * @param Platform $platform
      * @return bool
+     * @throws InvalidArgumentException
      */
     public function isFit(Platform $platform): bool
     {
-        return $this->isEditionFit($platform) && $this->isVersionFit($platform);
+        $this->assertValid($platform);
+
+        return $this->isEditionFit($platform->edition)
+            && $this->isDistributionFit($platform->distribution)
+            && $this->isVersionFit($platform->version, $platform->comparison)
+            && $this->isDistributionVersionFit($platform->distributionVersion, $platform->comparison);
     }
 
     /**
-     * @param Platform $platform
+     * Reject a condition that can never be evaluated correctly.
      *
-     * @return bool
+     * @param Platform $platform
+     * @return void
+     * @throws InvalidArgumentException
      */
-    private function isEditionFit(Platform $platform): bool
+    private function assertValid(Platform $platform): void
     {
-        if ($platform->isAnyEdition()) {
-            return true;
+        if ($platform->version === '' || $platform->distributionVersion === '') {
+            throw new InvalidArgumentException('Platform versions must not be empty.');
         }
 
-        return $this->productMetadata->getEdition() === $platform->getEdition();
+        if ($platform->distributionVersion !== null && $platform->distribution !== Distribution::MageOs) {
+            throw new InvalidArgumentException('Platform distributionVersion requires Distribution::MageOs.');
+        }
     }
 
     /**
-     * @param Platform $platform
+     * Check the declared edition against the installed product.
      *
+     * @param Edition $edition
      * @return bool
      */
-    private function isVersionFit(Platform $platform): bool
+    private function isEditionFit(Edition $edition): bool
     {
-        if ($platform->isAnyVersion()) {
+        return $edition === Edition::Any || $this->getProductMetadata()->getEdition() === $edition->value;
+    }
+
+    /**
+     * Check the declared distribution against the installed product.
+     *
+     * @param Distribution $distribution
+     * @return bool
+     */
+    private function isDistributionFit(Distribution $distribution): bool
+    {
+        return match ($distribution) {
+            Distribution::Any => true,
+            Distribution::MageOs => $this->isMageOs(),
+            Distribution::Magento => !$this->isMageOs(),
+        };
+    }
+
+    /**
+     * Check the declared Magento version against the installed product.
+     *
+     * @param string|null $version
+     * @param Comparison $comparison
+     * @return bool
+     */
+    private function isVersionFit(?string $version, Comparison $comparison): bool
+    {
+        return $version === null
+            || $this->compareVersions((string)$this->getProductMetadata()->getVersion(), $version, $comparison);
+    }
+
+    /**
+     * Check the declared Mage-OS version against the installed product.
+     *
+     * @param string|null $version
+     * @param Comparison $comparison
+     * @return bool
+     */
+    private function isDistributionVersionFit(?string $version, Comparison $comparison): bool
+    {
+        if ($version === null) {
             return true;
         }
 
-        return (bool)version_compare(
-            $this->productMetadata->getVersion(),
-            $platform->getVersion(),
-            $platform->getComparison()
-        );
+        $productMetadata = $this->getProductMetadata();
+
+        return method_exists($productMetadata, 'getDistributionVersion')
+            && $this->compareVersions((string)$productMetadata->getDistributionVersion(), $version, $comparison);
+    }
+
+    /**
+     * Compare an installed version with a declared one.
+     *
+     * @param string $installedVersion
+     * @param string $declaredVersion
+     * @param Comparison $comparison
+     * @return bool
+     */
+    private function compareVersions(string $installedVersion, string $declaredVersion, Comparison $comparison): bool
+    {
+        return (bool)version_compare($installedVersion, $declaredVersion, $comparison->value);
+    }
+
+    /**
+     * Check whether the installed product is Mage-OS.
+     *
+     * @return bool
+     */
+    private function isMageOs(): bool
+    {
+        $productMetadata = $this->getProductMetadata();
+
+        return method_exists($productMetadata, 'getDistributionName')
+            && $productMetadata->getDistributionName() === Distribution::MageOs->value;
+    }
+
+    /**
+     * Get product metadata that does not use the application cache, which may still be under construction.
+     *
+     * @return ProductMetadataInterface
+     */
+    private function getProductMetadata(): ProductMetadataInterface
+    {
+        return $this->productMetadata ??= $this->productMetadataFactory->create(['cache' => $this->nullCache]);
     }
 }

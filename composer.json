@@ -1,19 +1,32 @@
 {
-    "name": "fom/module-annotations",
-    "version": "1.0.1",
-    "description": "N/A",
+    "name": "fom/module-conditional-plugins",
+    "description": "Run Magento plugins and observers only on the editions and versions declared with PHP attributes",
     "type": "magento2-module",
-    "require": {
-        "magento/framework": "~102.0.0||~103.0.0",
-        "spiral/attributes": "~2.9.0"
+    "license": "OSL-3.0",
+    "authors": [
+        {
+            "name": "Friends of Magento",
+            "homepage": "https://github.com/FriendsOfMagento"
+        }
+    ],
+    "homepage": "https://github.com/FriendsOfMagento/module-conditional-plugins",
+    "support": {
+        "issues": "https://github.com/FriendsOfMagento/module-conditional-plugins/issues",
+        "source": "https://github.com/FriendsOfMagento/module-conditional-plugins"
     },
-    "license": [],
+    "require": {
+        "php": ">=8.1",
+        "magento/framework": "*"
+    },
     "autoload": {
         "files": [
             "registration.php"
         ],
         "psr-4": {
-            "Fom\\Annotations\\": ""
+            "Fom\\ConditionalPlugins\\": ""
         }
+    },
+    "config": {
+        "sort-packages": true
     }
 }

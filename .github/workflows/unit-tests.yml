@@ -1,0 +1,40 @@
+name: M2 Unit Tests
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+
+jobs:
+  unit-tests:
+    name: ${{ matrix.platform }} ${{ matrix.version }} / PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { platform: Magento, version: 2.4.7-p10, php: '8.1' }
+          - { platform: Magento, version: 2.4.7-p10, php: '8.3' }
+          - { platform: Magento, version: 2.4.8-p5, php: '8.2' }
+          - { platform: Magento, version: 2.4.8-p5, php: '8.4' }
+          - { platform: Magento, version: 2.4.9, php: '8.3' }
+          - { platform: Magento, version: 2.4.9, php: '8.5' }
+          - { platform: Mage-OS, version: 3.6.0, php: '8.3', project: mage-os/project-community-edition, repository: 'https://repo.mage-os.org/' }
+          - { platform: Mage-OS, version: 4.0.0, php: '8.5', project: mage-os/project-community-edition, repository: 'https://repo.mage-os.org/' }
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run unit tests
+        env:
+          MODULE_NAME: Fom_ConditionalPlugins
+          COMPOSER_NAME: fom/module-conditional-plugins
+          MAGENTO_VERSION: ${{ matrix.version }}
+          PROJECT_NAME: ${{ matrix.project }}
+          REPOSITORY_URL: ${{ matrix.repository }}
+          PHPUNIT_FILE: .github/phpunit.xml
+          IMAGE: extdn/magento-unit-tests-action:${{ matrix.php }}-latest
+        run: >-
+          docker run --rm
+          --env GITHUB_WORKSPACE=/github/workspace
+          --env MODULE_NAME --env COMPOSER_NAME --env MAGENTO_VERSION
+          --env PROJECT_NAME --env REPOSITORY_URL --env PHPUNIT_FILE
+          --volume "$GITHUB_WORKSPACE:/github/workspace"
+          "$IMAGE"
