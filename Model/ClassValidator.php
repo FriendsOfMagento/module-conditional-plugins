@@ -2,64 +2,40 @@
 
 declare(strict_types=1);
 
-namespace Fom\Annotations\Model;
+namespace Fom\ConditionalPlugins\Model;
+
+use Fom\ConditionalPlugins\Enum\LogicalOperator;
 
 class ClassValidator
 {
-    /**
-     * @var AttributeReader
-     */
-    private $attributeReader;
-
-    /**
-     * @var PlatformValidator
-     */
-    private $platformValidator;
-
     /**
      * @param AttributeReader $attributeReader
      * @param PlatformValidator $platformValidator
      */
     public function __construct(
-        AttributeReader $attributeReader,
-        PlatformValidator $platformValidator
+        private readonly AttributeReader $attributeReader,
+        private readonly PlatformValidator $platformValidator
     ) {
-        $this->attributeReader = $attributeReader;
-        $this->platformValidator = $platformValidator;
     }
 
     /**
-     * @param string $className
+     * Check whether a class may run on the current platform.
      *
+     * @param string $className
      * @return bool
-     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      */
     public function isExecutable(string $className): bool
     {
-        $operator = $this->attributeReader->getOperator($className);
         $platformList = $this->attributeReader->getPlatformList($className);
-
-        $isExecutable = null;
-        foreach ($platformList as $platform) {
-            $validationResult = $this->platformValidator->isFit($platform);
-            switch (true) {
-                case $operator->isOperatorOr():
-                    $isExecutable = $isExecutable === null ? $validationResult : $isExecutable || $validationResult;
-                    if ($isExecutable) {
-                        return $isExecutable;
-                    }
-
-                    break;
-                case $operator->isOperatorAnd():
-                    $isExecutable = $isExecutable === null ? $validationResult : $isExecutable && $validationResult;
-                    if (!$isExecutable) {
-                        return $isExecutable;
-                    }
-
-                    break;
-            }
+        if ($platformList === []) {
+            return true;
         }
 
-        return $isExecutable === null ? true : $isExecutable;
+        $results = array_map($this->platformValidator->isFit(...), $platformList);
+
+        return match ($this->attributeReader->getOperator($className)->operator) {
+            LogicalOperator::Or => in_array(true, $results, true),
+            LogicalOperator::And => !in_array(false, $results, true),
+        };
     }
 }

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit colors="true" bootstrap="./framework/bootstrap.php" stderr="true">
+    <testsuites>
+        <testsuite name="UnitTests">
+            <directory suffix="Test.php">../../../vendor/%COMPOSER_NAME%/Test/Unit</directory>
+        </testsuite>
+    </testsuites>
+    <php>
+        <ini name="date.timezone" value="UTC"/>
+    </php>
+</phpunit>

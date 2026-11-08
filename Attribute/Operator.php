@@ -2,70 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Fom\Annotations\Attribute;
+namespace Fom\ConditionalPlugins\Attribute;
 
 use Attribute;
-use Spiral\Attributes\NamedArgumentConstructorAttribute;
+use Fom\ConditionalPlugins\Enum\LogicalOperator;
 
-/**
- * @Annotation
- * @Target({ "CLASS" })
- */
 #[Attribute(Attribute::TARGET_CLASS)]
-class Operator implements NamedArgumentConstructorAttribute
+class Operator
 {
-    public const OPERATOR_AND = 'and';
-    public const OPERATOR_OR = 'or';
-
     /**
-     * @var string
+     * @param LogicalOperator $operator
      */
-    private $operator;
-
-    /**
-     * @param string $operator
-     */
-    public function __construct(string $operator = self::OPERATOR_AND)
-    {
-        $this->operator = $this->prepareValue(
-            $operator,
-            [
-                self::OPERATOR_AND,
-                self::OPERATOR_OR,
-            ],
-            self::OPERATOR_AND
-        );
-    }
-
-    /**
-     * @return bool
-     */
-    public function isOperatorAnd(): bool
-    {
-        return $this->operator === self::OPERATOR_AND;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isOperatorOr(): bool
-    {
-        return $this->operator === self::OPERATOR_OR;
-    }
-
-    /**
-     * @param string $value
-     * @param array $allowedValues
-     * @param string $defaultValue
-     *
-     * @return string
-     */
-    private function prepareValue(string $value, array $allowedValues, string $defaultValue): string
-    {
-        if (!in_array($value, $allowedValues, true)) {
-            $value = $defaultValue;
-        }
-
-        return $value;
+    public function __construct(
+        public readonly LogicalOperator $operator = LogicalOperator::And
+    ) {
     }
 }

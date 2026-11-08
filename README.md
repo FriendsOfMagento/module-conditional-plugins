@@ -1,349 +1,205 @@
-[![M2 Coding Standard](https://github.com/FriendsOfMagento/module-annotations/actions/workflows/coding-standard.yml/badge.svg?branch=develop)](https://github.com/FriendsOfMagento/module-annotations/actions/workflows/coding-standard.yml)
-[![M2 Mess Detector](https://github.com/FriendsOfMagento/module-annotations/actions/workflows/mess-detector.yml/badge.svg?branch=develop)](https://github.com/FriendsOfMagento/module-annotations/actions/workflows/mess-detector.yml)
-[![M2 PHPStan](https://github.com/FriendsOfMagento/module-annotations/actions/workflows/phpstan.yml/badge.svg?branch=develop)](https://github.com/FriendsOfMagento/module-annotations/actions/workflows/phpstan.yml)
-# Annotations for Magento 2
+# Conditional Plugins & Observers for Magento 2
 
-During the development of extensions, we often encounter a situation where some [plugin](https://devdocs.magento.com/guides/v2.4/extension-dev-guide/plugins.html) or [observer](https://devdocs.magento.com/guides/v2.4/extension-dev-guide/events-and-observers.html) should be executed only on certain Magento versions and Magento editions. To solve this problem, we usually inject `\Magento\Framework\App\ProductMetadataInterface` and then use additional checks for versions and editions.
+![Conditional Plugins & Observers for Magento 2](docs/images/banner.png)
 
-**Annotations for Magento 2** will help solve this problem and provide flexible configuration for conditions combination.
+[![M2 Coding Standard](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/coding-standard.yml/badge.svg?branch=develop)](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/coding-standard.yml)
+[![M2 Mess Detector](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/mess-detector.yml/badge.svg?branch=develop)](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/mess-detector.yml)
+[![M2 PHPStan](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/phpstan.yml/badge.svg?branch=develop)](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/phpstan.yml)
+[![M2 PHP Compatibility](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/php-compatibility.yml/badge.svg?branch=develop)](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/php-compatibility.yml)
+[![M2 Unit Tests](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/unit-tests.yml/badge.svg?branch=develop)](https://github.com/FriendsOfMagento/module-conditional-plugins/actions/workflows/unit-tests.yml)
 
-## Requirements
+Extension vendors ship one release to many stores, running different Magento versions and editions. When a [plugin](https://developer.adobe.com/commerce/php/development/components/plugins/) or an [observer](https://developer.adobe.com/commerce/php/development/components/events-and-observers/) is only needed on some of them, the usual fix is to inject `ProductMetadataInterface` and add an `if` on the edition and version. Those checks repeat across the code, hide what the class is really for and run on every call, and the class is still instantiated and still sits in every stack trace on stores where it has nothing to do.
 
-- PHP >= 7.1
-- Magento Any Edition >= 2.3.0
+With this module developers declare where a plugin or observer applies with a native PHP attribute on the class. Magento checks the condition while it builds its configuration and marks a class that does not fit the current platform as disabled, so it is never instantiated and never appears in a stack trace. The code stays free of version checks, and one release can serve every platform the vendor supports.
 
-## How to install
-
-### Install via composer (recommended)
-
-Run the following command in Magento 2 root folder:
-
-```
-composer require fom/module-annotations
-php bin/magento setup:upgrade
-php bin/magento setup:static-content:deploy
+```php
+#[Platform(version: '2.4.8', comparison: Comparison::LessThan)]
+class FixFixedInMagento248Observer implements ObserverInterface
 ```
 
-## Developer Guide
+## Compatibility
 
-In Magento 2, all [plugins](https://devdocs.magento.com/guides/v2.4/extension-dev-guide/plugins.html) and [observers](https://devdocs.magento.com/guides/v2.4/extension-dev-guide/events-and-observers.html) using `\Magento\Framework\App\ProductMetadataInterface` to check the current version and edition still continue to be instantiated, executed, and use memory and processor. **Annotations for Magento 2** module uses an optimized approach, plugins and observers that should not be executed for the current version and edition will be disabled at the stage of building the configuration of plugins and observers. This means that checking whether the plugin or the observer should be executed will be performed **ONLY** once, at the stage of cache building, which will slightly reduce stack traces, and this in turn should have a positive impact on performance.
+- **Magento Open Source / Adobe Commerce:** 2.4.7 or later, tested on 2.4.7-p10, 2.4.8-p5 and 2.4.9, and on Adobe Commerce B2B with 2.4.9
+- **Mage-OS:** 3.x and 4.x, tested on 3.6.0 and 4.0.0
+- **PHP:** 8.1 or later, tested on 8.1 to 8.5
 
-[Attributes](https://www.php.net/manual/en/language.attributes.php) (for PHP >= 8.0) or [Doctrine Annotations](https://www.doctrine-project.org/projects/annotations.html) (for PHP >= 7.1) are used to configure [plugins](https://devdocs.magento.com/guides/v2.4/extension-dev-guide/plugins.html) and [observers](https://devdocs.magento.com/guides/v2.4/extension-dev-guide/events-and-observers.html).
+Other versions aren't tested.
 
-**Annotations for Magento 2** provides two attribute classes:
-- [`Fom\Annotations\Attribute\Platform`](Attribute/Platform.php)
-- [`Fom\Annotations\Attribute\Operator`](Attribute/Operator.php)
+## Installation
 
-### [`Fom\Annotations\Attribute\Platform`](Attribute/Platform.php)
-The attribute is used to describe the edition, version, and comparison operator for the Magento. This attribute is repeatable, and can be added to the class several times.
+```bash
+composer require fom/module-conditional-plugins
+bin/magento module:enable Fom_ConditionalPlugins
+bin/magento setup:upgrade
+bin/magento cache:flush
+```
 
-Parameters:
-- `edition` - `string`, contains the Magento edition. Acceptable values:
-  - `'any'` - corresponds to the constant [`Platform::EDITION_ANY`](Attribute/Platform.php#L21)
-  - `'Community'` - corresponds to the constant [`Platform::EDITION_COMMUNITY`](Attribute/Platform.php#L22)
-  - `'Commerce'` - corresponds to the constant [`Platform::EDITION_COMMERCE`](Attribute/Platform.php#L23)
-  - `'B2B'` - corresponds to the constant [`Platform::EDITION_B2B`](Attribute/Platform.php#L24)
-  
-  If an empty value is passed, the check will be performed as for the value [`Platform::EDITION_ANY`](Attribute/Platform.php#L21).
+## Usage
 
+Add one or more `Platform` attributes to a plugin or observer class. The class runs only when the current platform fits them.
 
-- `version` - `string`, any correct version that will be passed to the [version_compare()](https://www.php.net/manual/en/function.version-compare.php) function.
+```php
+<?php
 
-- `comparison` - `string`, any valid comparison operator accepted by the [version_compare()](https://www.php.net/manual/en/function.version-compare.php) function:
-  - `'<'` - corresponds to the constant [`Platform::COMPARISON_LESS_THAN`](Attribute/Platform.php#L29)
-  - `'<='` - corresponds to the constant [`Platform::COMPARISON_LESS_THAN_OR_EQUAL`](Attribute/Platform.php#L30)
-  - `'>'` - corresponds to the constant [`Platform::COMPARISON_GREATER_THAN`](Attribute/Platform.php#L31)
-  - `'>='` - corresponds to the constant [`Platform::COMPARISON_GREATER_THAN_OR_EQUAL`](Attribute/Platform.php#L32)
-  - `'='` - corresponds to the constant [`Platform::COMPARISON_EQUAL`](Attribute/Platform.php#L33)
-  - `'!='` - corresponds to the constant [`Platform::COMPARISON_NOT_EQUAL`](Attribute/Platform.php#L34)
+declare(strict_types=1);
 
-  If the value was not passed, the [`Platform::COMPARISON_GREATER_THAN_OR_EQUAL`](Attribute/Platform.php#L32) will be used by default.
+namespace Vendor\Module\Observer;
 
-### [`Fom\Annotations\Attribute\Operator`](Attribute/Operator.php)
+use Fom\ConditionalPlugins\Attribute\Platform;
+use Fom\ConditionalPlugins\Enum\Edition;
+use Magento\Framework\Event\Observer;
+use Magento\Framework\Event\ObserverInterface;
 
-The attribute is used if the [`Platform`](Attribute/Platform.php) attribute has been added to the class several times, it is used to summarize the results obtained from [`Platform`](Attribute/Platform.php) list. This attribute is optional and can be applied to a class only 1 time.
+#[Platform(edition: Edition::Community, version: '2.4.8')]
+class SomeKindOfActionObserver implements ObserverInterface
+{
+    public function execute(Observer $observer): void
+    {
+        // ...
+    }
+}
+```
 
-Parameters:
-- `operator` - `string`, used to sum the result as logical `AND` and logical `OR`.
-  - `'and'` - corresponds to the constant [`Operator::OPERATOR_AND`](Attribute/Operator.php#L17)
-  - `'or'` - corresponds to the constant [`Operator::OPERATOR_OR`](Attribute/Operator.php#L18)
+A class without a `Platform` attribute always runs.
 
-  By default, [`Operator::OPERATOR_AND`](Attribute/Operator.php#L17) is used.
+The attributes are read while the configuration is built, so run `bin/magento cache:flush` after changing one, and `bin/magento setup:di:compile` too in production mode.
+
+### Platform
+
+[`Fom\ConditionalPlugins\Attribute\Platform`](Attribute/Platform.php) describes one condition. It can be added to a class several times.
+
+| Parameter | Type | Default | Compared with |
+|---|---|---|---|
+| `edition` | [`Edition`](Enum/Edition.php) | `Edition::Any` | the edition the platform reports |
+| `version` | `string` | none | the Magento version, such as `2.4.7-p10` |
+| `comparison` | [`Comparison`](Enum/Comparison.php) | `Comparison::GreaterThanOrEqual` | how both versions are compared |
+| `distribution` | [`Distribution`](Enum/Distribution.php) | `Distribution::Any` | who ships the platform |
+| `distributionVersion` | `string` | none | the Mage-OS version, such as `4.0.0` |
+
+Versions are compared with [`version_compare()`](https://www.php.net/manual/en/function.version-compare.php).
+
+An empty version, or a `distributionVersion` without `Distribution::MageOs`, throws `InvalidArgumentException` while the configuration is built.
+
+#### Editions
+
+| Case | Fits |
+|---|---|
+| `Edition::Any` | every platform |
+| `Edition::Community` | Magento Open Source and Mage-OS |
+| `Edition::Commerce` | Adobe Commerce without B2B |
+| `Edition::B2b` | Adobe Commerce with B2B |
+
+Installing the B2B extension changes the edition the platform reports, so `Edition::Commerce` does not fit a store with B2B. Use [`LogicalOperator::Or`](#operator) to target both.
+
+#### Distributions
+
+| Case | Fits |
+|---|---|
+| `Distribution::Any` | every platform |
+| `Distribution::Magento` | Magento Open Source and Adobe Commerce, but not Mage-OS |
+| `Distribution::MageOs` | Mage-OS only |
+
+#### Comparisons
+
+| Case | Operator |
+|---|---|
+| `Comparison::LessThan` | `<` |
+| `Comparison::LessThanOrEqual` | `<=` |
+| `Comparison::GreaterThan` | `>` |
+| `Comparison::GreaterThanOrEqual` | `>=` |
+| `Comparison::Equal` | `=` |
+| `Comparison::NotEqual` | `!=` |
+
+### Operator
+
+[`Fom\ConditionalPlugins\Attribute\Operator`](Attribute/Operator.php) sets how several `Platform` attributes are combined. It is optional and can be added to a class once.
+
+| Case | The class runs when |
+|---|---|
+| `LogicalOperator::And` (default) | every condition fits |
+| `LogicalOperator::Or` | at least one condition fits |
+
+### Mage-OS
+
+Mage-OS reports itself to extensions as Magento Open Source, with the version of the Magento release it is based on. Mage-OS 3.6.0 and 4.0.0 are both based on Magento 2.4.9, so a Community 2.4.9 condition fits them too. Use `distribution` when Mage-OS needs different behavior.
+
+| Condition | Magento 2.4.9 | Mage-OS 3.6.0 | Mage-OS 4.0.0 |
+|---|---|---|---|
+| `Platform(edition: Edition::Community, version: '2.4.9')` | runs | runs | runs |
+| `Platform(edition: Edition::Community, version: '2.4.9', distribution: Distribution::Magento)` | runs | off | off |
+| `Platform(distribution: Distribution::MageOs)` | off | runs | runs |
+| `Platform(distribution: Distribution::MageOs, distributionVersion: '4.0.0')` | off | off | runs |
 
 ## Examples
 
-In the examples we will demonstrate observers, but the exact same declaration is used for plugins.
+The examples show observers. Plugins are declared the same way.
 
-### Observer with PHP8 Attributes
-
-Let's disable observer for Any Magento Edition with versions lower than 2.4.4.
+Run only below a version, on any edition:
 
 ```php
-<?php
-
-declare(strict_types=1);
-
-namespace Vendor\Module\Observer;
-
-use Magento\Framework\Event\Observer;
-use Magento\Framework\Event\ObserverInterface;
-
-#[
-    \Fom\Annotations\Attribute\Platform(
-        edition: \Fom\Annotations\Attribute\Platform::EDITION_ANY,
-        version: '2.4.4',
-        comparison: \Fom\Annotations\Attribute\Platform::COMPARISON_LESS_THAN
-    ),
-    \Fom\Annotations\Attribute\Operator(operator: \Fom\Annotations\Attribute\Operator::OPERATOR_AND)
-]
+#[Platform(version: '2.4.8', comparison: Comparison::LessThan)]
 class SomeKindOfActionObserver implements ObserverInterface
-{
-    public function execute(Observer $observer): void
-    {
-        // ...
-    }
-}
 ```
 
-We can also import our attributes to use a short class name.
+Run on a range of versions. Both conditions must fit, because `LogicalOperator::And` is the default:
 
 ```php
-<?php
-
-declare(strict_types=1);
-
-namespace Vendor\Module\Observer;
-
-use Fom\Annotations\Attribute\Operator;
-use Fom\Annotations\Attribute\Platform;
-use Magento\Framework\Event\Observer;
-use Magento\Framework\Event\ObserverInterface;
-
-#[
-    Platform(
-        edition: Platform::EDITION_ANY,
-        version: '2.4.4',
-        comparison: Platform::COMPARISON_LESS_THAN
-    ),
-    Operator(operator: Operator::OPERATOR_AND)
-]
+#[Platform(version: '2.4.7')]
+#[Platform(version: '2.4.9', comparison: Comparison::LessThan)]
 class SomeKindOfActionObserver implements ObserverInterface
-{
-    public function execute(Observer $observer): void
-    {
-        // ...
-    }
-}
 ```
 
-### Observer with Doctrine Annotations (PHP < 8.0).
-
-Let's do the same, but with a docblock section to allow use for older PHP versions.
+Run on Adobe Commerce with or without B2B:
 
 ```php
-<?php
-
-declare(strict_types=1);
-
-namespace Vendor\Module\Observer;
-
-use Magento\Framework\Event\Observer;
-use Magento\Framework\Event\ObserverInterface;
-
-/**
- * @\Fom\Annotations\Attribute\Platform(
- *     edition = \Fom\Annotations\Attribute\Platform::EDITION_ANY,
- *     version = "2.4.4",
- *     comparison = \Fom\Annotations\Attribute\Platform::COMPARISON_LESS_THAN
- * )
- * @\Fom\Annotations\Attribute\Operator(operator = \Fom\Annotations\Attribute\Operator::OPERATOR_AND)
- */
+#[Platform(edition: Edition::Commerce)]
+#[Platform(edition: Edition::B2b)]
+#[Operator(LogicalOperator::Or)]
 class SomeKindOfActionObserver implements ObserverInterface
-{
-    public function execute(Observer $observer): void
-    {
-        // ...
-    }
-}
 ```
 
-We can still import our attributes to use a short class name.
+Run everywhere except Mage-OS:
 
 ```php
-<?php
-
-declare(strict_types=1);
-
-namespace Vendor\Module\Observer;
-
-use Fom\Annotations\Attribute\Operator;
-use Fom\Annotations\Attribute\Platform;
-use Magento\Framework\Event\Observer;
-use Magento\Framework\Event\ObserverInterface;
-
-/**
- * @Platform(
- *     edition = Platform::EDITION_ANY,
- *     version = "2.4.4",
- *     comparison = Platform::COMPARISON_LESS_THAN
- * )
- * @Operator(operator = Operator::OPERATOR_AND)
- */
+#[Platform(distribution: Distribution::Magento)]
 class SomeKindOfActionObserver implements ObserverInterface
-{
-    public function execute(Observer $observer): void
-    {
-        // ...
-    }
-}
 ```
 
-### Observer with a combined declaration, PHP 8 Attribute and Doctrine annotations, allowing this module to be used with different PHP versions.
-
-We have to use the one-line PHP8 Attribute notation. In this case, our PHP8 Attribute will be interpreted as a comment for older PHP versions, since it starts with `#`.
+Run only on Mage-OS 4.0.0 based on Magento 2.4.9:
 
 ```php
-<?php
-
-declare(strict_types=1);
-
-namespace Vendor\Module\Observer;
-
-use Fom\Annotations\Attribute\Operator;
-use Fom\Annotations\Attribute\Platform;
-use Magento\Framework\Event\Observer;
-use Magento\Framework\Event\ObserverInterface;
-
-/**
- * @Platform(
- *     edition = Platform::EDITION_ANY,
- *     version = "2.4.4",
- *     comparison = Platform::COMPARISON_LESS_THAN
- * )
- * @Operator(operator = Operator::OPERATOR_AND)
- */
-#[Platform(edition: Platform::EDITION_ANY, version: '2.4.4', comparison: Platform::COMPARISON_LESS_THAN), Operator(operator: Operator::OPERATOR_AND)]
+#[Platform(
+    edition: Edition::Community,
+    version: '2.4.9',
+    comparison: Comparison::Equal,
+    distribution: Distribution::MageOs,
+    distributionVersion: '4.0.0'
+)]
 class SomeKindOfActionObserver implements ObserverInterface
-{
-    public function execute(Observer $observer): void
-    {
-        // ...
-    }
-}
 ```
 
-### Example without using the [`Operator`](Attribute/Operator.php) attribute
-
-Since [`Operator`](Attribute/Operator.php) is equal to [`Operator::OPERATOR_AND`](Attribute/Operator.php#L17) by default, we can omit it in the following cases:
-
-#### We use only one platform condition
+Keep Community 2.4.9 and later, but disable on Mage-OS 4.0.0 and later:
 
 ```php
-<?php
-
-declare(strict_types=1);
-
-namespace Vendor\Module\Observer;
-
-use Fom\Annotations\Attribute\Operator;
-use Fom\Annotations\Attribute\Platform;
-use Magento\Framework\Event\Observer;
-use Magento\Framework\Event\ObserverInterface;
-
-#[
-    Platform(
-        edition: Platform::EDITION_ANY,
-        version: '2.4.4',
-        comparison: Platform::COMPARISON_LESS_THAN
-    )
-]
+#[Platform(edition: Edition::Community, version: '2.4.9', distribution: Distribution::Magento)]
+#[Platform(distribution: Distribution::MageOs, distributionVersion: '4.0.0', comparison: Comparison::LessThan)]
+#[Operator(LogicalOperator::Or)]
 class SomeKindOfActionObserver implements ObserverInterface
-{
-    public function execute(Observer $observer): void
-    {
-        // ...
-    }
-}
 ```
 
-#### We use several platform conditions, but all their conditions must be satisfied at the same time
+## How it works
 
-```php
-<?php
+- A preference on `Magento\Framework\ObjectManager\Config\Reader\Dom` marks plugins as disabled when `di.xml` is read.
+- A plugin on `Magento\Framework\Event\Config\Converter` marks observers as disabled when `events.xml` is read.
+- Conditions are checked only while the configuration is built. The result is stored with the configuration in the cache and in compiled code.
 
-declare(strict_types=1);
+## Limitations
 
-namespace Vendor\Module\Observer;
+- A class has to load before its attributes can be read, so a plugin or observer can't extend or implement a type that is missing on the current platform.
+- A class is still compiled on every platform, so its constructor can't depend on a class that is missing on the current platform. `setup:di:compile` fails on such a class even when the attribute disables it. Keep that code in a separate module that requires the missing package.
+- Attributes are read from the class itself. A child class does not inherit the attributes of its parent.
+- Only plugins and observers are supported.
 
-use Fom\Annotations\Attribute\Platform;
-use Magento\Framework\Event\Observer;
-use Magento\Framework\Event\ObserverInterface;
+## License
 
-#[
-    Platform(
-        edition: Platform::EDITION_COMMERCE,
-        version: '2.4.4',
-        comparison: Platform::COMPARISON_LESS_THAN
-    ),
-    Platform(
-        edition: Platform::EDITION_B2B,
-        version: '2.4.4',
-        comparison: Platform::COMPARISON_LESS_THAN
-    )
-]
-class SomeKindOfActionObserver implements ObserverInterface
-{
-    public function execute(Observer $observer): void
-    {
-        // ...
-    }
-}
-```
-
-### Example of using [`Operator::OPERATOR_AND`](Attribute/Operator.php#L18)
-
-In rare cases, we may need to use specific conditions when a plugin or an observer must work on different versions and editions at the same time, in this case we can describe several necessary platform conditions and summarize them using [`Operator::OPERATOR_AND`](Attribute/Operator.php#L18). In this case, if at least one of the conditions is met, our observer or plugin will be executed.
-
-In the example below, the observer will be executed on `Magento Community Edition` `=` `2.4.3` or on `Magento Commerce Edition` `=` `2.4.2`, on any other versions or editions, this observer will be disabled.
-
-```php
-<?php
-
-declare(strict_types=1);
-
-namespace Vendor\Module\Observer;
-
-use Fom\Annotations\Attribute\Operator;
-use Fom\Annotations\Attribute\Platform;
-use Magento\Framework\Event\Observer;
-use Magento\Framework\Event\ObserverInterface;
-
-#[
-    Platform(
-        edition: Platform::EDITION_COMMUNITY,
-        version: '2.4.3',
-        comparison: Platform::COMPARISON_EQUAL
-    ),
-    Platform(
-        edition: Platform::EDITION_COMMERCE,
-        version: '2.4.2',
-        comparison: Platform::COMPARISON_LESS_THAN
-    ),
-    Operator(operator: Operator::OPERATOR_OR)
-]
-class SomeKindOfActionObserver implements ObserverInterface
-{
-    public function execute(Observer $observer): void
-    {
-        // ...
-    }
-}
-```
-
-## Additional Tools
-
-- [PHP Annotations](https://plugins.jetbrains.com/plugin/7320-php-annotations) - Extends PhpStorm to support annotations in DocBlocks.
-
-## Copyright
-
-Copyright © FriendsOfMagento
+[Open Software License 3.0](LICENSE.txt)

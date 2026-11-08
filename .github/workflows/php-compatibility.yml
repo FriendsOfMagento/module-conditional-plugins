@@ -1,0 +1,13 @@
+name: M2 PHP Compatibility
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+
+jobs:
+  php-compatibility:
+    name: M2 PHP Compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: extdn/github-actions-m2/php-compatibility/8.5@master
